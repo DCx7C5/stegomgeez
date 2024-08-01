@@ -1,3 +1,3 @@
 # stegomgeez
 
-- all-in-one tool  
+- all-in-one tool
