@@ -8,6 +8,7 @@ from typing import Tuple, List
 
 from PIL import Image
 from hashid import HashID
+from numpy import array, ndarray
 from sympy import primerange
 
 
@@ -38,14 +39,29 @@ def get_prime_numbers_up_to(n):
     return list(primerange(2, n))
 
 
-def str2bin(text):
-    """Simple string to binary converter"""
+def str2bin_str(text):
+    """Converts string to binary string"""
     return ''.join(format(ord(x), '08b') for x in text)
+
+
+def bin_str2str(binary_message) -> str:
+    """Converts binary string to string"""
+    message = ''
+    for i in range(0, len(binary_message), 8):
+        byte = binary_message[i:i + 8]
+        if len(byte) < 8:
+            break
+        message += chr(int(byte, 2))
+    return message
 
 
 def int2bin(n):
     """Simple integer to binary converter"""
     return "{0:08b}".format(n)
+
+
+def bit2binstr(bit_values):
+    return ''.join(str(bit) for bit in bit_values)
 
 
 def convert_lsb_mask(mask):
@@ -61,7 +77,7 @@ def convert_lsb_mask(mask):
 
 
 def text_fits_in_image(img_size: Tuple[int, int], text: bytes) -> bool:
-    """Check if text fits in image using LSB steganography."""
+    """Checks if text fits in image using LSB steganography."""
     w, h = img_size
     return len(text) <= w * h * 3
 
@@ -73,6 +89,11 @@ def identify_hash(text: str) -> List[str]:
     if hashes:
         possible_hashes.extend(hashes)
     return possible_hashes
+
+
+def pil2opencv(image: Image.Image) -> ndarray:
+    open_cv_image = array(image)
+    return open_cv_image[:, :, ::-1].copy()
 
 
 def save_png(image: Image.Image, path: Path, compression_level=0, iformat='PNG') -> None:
@@ -146,11 +167,9 @@ async def save_to_disk(
 log_sem = Semaphore(1)  # semaphore for log
 
 
-async def write_to_logfile(line: str, path: Path, file_name) -> None:
+async def write_to_logfile(line: str, path: Path) -> None:
     await log_sem.acquire()
     async with open(path, "r+") as f:
-        await f.writelines([
-            ln for ln in await f.readlines()
-            if not filename_log_pattern.match(ln).string == file_name
-        ])
+        pass
+
     log_sem.release()
