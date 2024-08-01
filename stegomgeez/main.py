@@ -9,26 +9,24 @@ from types import FunctionType
 from pwd import getpwuid
 
 import aiofiles
-import numpy as np
 import magic
-import logging
 
 from argparse import Namespace, ArgumentParser
 from typing import (List, Tuple, Sequence)
 from PIL import Image
+from numpy import array, uint8
 from rich.console import Console
-from rich.logging import RichHandler
 from transformers import pipeline
-from ciphers import encrypt, decrypt
 from transforms.bands import get_band
 from transforms.geometric import change_angle, flip_image
+from ciphers import encrypt, decrypt
 from stegomgeez.helper import (
-    save_image_to_disk,
     save_png,
     RGBA_VALS,
     load_data,
     log_sem,
     save_to_disk,
+    pil2opencv,
 )
 
 language_detection = pipeline("text-classification", model="papluca/xlm-roberta-base-language-detection")
@@ -39,14 +37,6 @@ console = Console(
     width=999 if not isatty(1) else get_terminal_size().columns,
 )
 
-FORMAT = "%(message)s"
-logging.basicConfig(
-    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[
-        RichHandler(
-            console=console,
-        )
-    ]
-)
 
 HOME_DIR = Path(f"/home/{getpwuid(getuid())[0]}")
 APP_DIR = HOME_DIR / "STEGOSUITE"
@@ -85,18 +75,19 @@ async def load_jobs(func, *args):
 class Job:
     __slots__ = (
         'tasks', 'image', 'output_dir', 'filename', 'ciphers',
-        'loop', 'debug', 'rw', 'mime', 'ext', 'task_queue'
+        'loop', 'debug', 'rw', 'mime', 'ext', 'task_queue', '_cvimg'
     )
 
     def __init__(self, img, tasks, output_dir, filename, ext, mime, rw, debug):
         tasks = [t for t in tasks if t is not None]
-        self.image: Image = img
+        self.image: Image.Image = img
         self.tasks: List[Tuple[FunctionType, str | int],] | List[FunctionType, str | int] = tasks
         self.output_dir: Path = output_dir
         self.filename: str = filename
         self.ext: str = ext
         self.mime: str = mime
         self.rw: bool = rw
+        self._cvimg: array = None
         self.loop: AbstractEventLoop = asyncio.get_event_loop()
         self.debug: bool = debug
 
@@ -127,16 +118,17 @@ class Job:
     async def save(self, obj: str | bytes | Image.Image, convert=False, quality=95):
         file_name = self.filename + '.' + self.ext
         abs_path = self.output_dir / file_name
-        if self.debug:
-            logging.debug(f"Saving to {self.output_dir} / {file_name}")
         await save_to_disk(obj, abs_path, convert, True, quality, self.loop)
 
     @property
-    def data(self, numpy=False) -> Sequence | np.array:
-        data = self.image.getdata()
-        if numpy:
-            return np.array(data, np.uint8)
-        return data
+    def data(self) -> Sequence | array:
+        return self.image.getdata()
+
+    @property
+    def cvimg(self):
+        if self._cvimg is None:
+            self._cvimg = pil2opencv(self.image)
+        return self._cvimg
 
     @property
     def has_transp(self) -> bool:
@@ -203,7 +195,7 @@ class Manager:
                 image = await load_data(path)
             yield [image, path, mime_type]
 
-    async def create_backup(self, filename: str, data: bytes | Image):
+    async def create_backup(self, filename: str, data: bytes | Image, src_path: Path):
         """
         Creates a copy of the users image in project directory and
         a decompressed version of the image if it's a PNG.
@@ -216,7 +208,10 @@ class Manager:
             png_name = png_name + '_decompressed.' + ext
             dec_path = self.output_dir / png_name
             save_png(data, dec_path)
-        save_image_to_disk(data, backup_path)
+        # save_image_to_disk(data, backup_path)
+        async with open(src_path, 'rb') as src:
+            async with open(backup_path, 'wb') as dst:
+                await dst.write(await src.read())
 
     async def parse_transformation_ruleset(self, image, mime: str):
         """Creates combinations of all transformation rules applied to the image"""
@@ -239,8 +234,8 @@ class Manager:
 
         combs = []
         if mime == "image/jpeg":
-            combs = ([[(change_angle, a), (flip_image, m) if m is not None else None] for a in angles for m in mirrors] +
-                     [[(get_band, b)] for b in bands])
+            combs = ([[(change_angle, a), (flip_image, m) if m is not None else None] for a in angles for m in mirrors]
+                     + [[(get_band, b)] for b in bands])
         elif mime == "image/png":
             combs = [[(change_angle, a), (flip_image, m) if m is not None else None, (get_band, b)]
                      for a in angles for m in mirrors for b in bands]
@@ -263,7 +258,6 @@ class Manager:
                     lines.append(rep_log)
                     lines.sort()
             await file.writelines(lines)
-        logging.debug(rep_log)
 
     async def load(self, image: Image.Image | bytes, path: Path, mime: str, combination):
         """Instantiates a Job class"""
@@ -282,7 +276,7 @@ class Manager:
     async def start_manager(self):
         """Starts the manager"""
         async for img, path, mime in self.load_file_paths():
-            await self.create_backup(path.name, img)
+            await self.create_backup(path.name, img, path)
             async for combi in self.parse_transformation_ruleset(img, mime):
                 async with asyncio.TaskGroup() as tg:
                     await tg.create_task(self.load(img, path, mime, combi))
@@ -374,7 +368,6 @@ async def main(ev_loop):
         args.outdir = Path(getcwd()).absolute() / '..' / "TESTOUT"
         if not args.outdir.exists():
             args.outdir.mkdir()
-        logging.debug(args)
 
     async with Manager(
             project_name=args.projectname,
