@@ -101,13 +101,13 @@ def lsb_decode(
 
     bit_values = []
 
-    def extract_bits(value, bitmask):
+    def extract_bits(value, bitmask, bt=bit_type):
         bits = []
         for i in range(8):
             if bitmask & (1 << i):
-                if bit_type == 'lsb':
+                if bt == 'lsb':
                     bits.append((value >> i) & 1)
-                elif bit_type == 'msb':
+                elif bt == 'msb':
                     bits.append((value >> (7 - i)) & 1)
         return bits
 
