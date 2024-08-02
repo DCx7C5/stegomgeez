@@ -5,14 +5,12 @@ from asyncio import AbstractEventLoop
 
 from os import (getuid, isatty, get_terminal_size, getcwd)
 from pathlib import Path
-from types import FunctionType
 from pwd import getpwuid
 
 import aiofiles
 import magic
 
 from argparse import Namespace, ArgumentParser
-from typing import (List, Tuple, Sequence)
 from PIL import Image
 from numpy import array, uint8
 from rich.console import Console
@@ -20,13 +18,29 @@ from transformers import pipeline
 from transforms.bands import get_band
 from transforms.geometric import change_angle, flip_image
 from ciphers import encrypt, decrypt
-from stegomgeez.helper import (
-    save_png,
+
+from typing_definitions import (
+    CombinationList,
+    AnyDataContent,
+    AsyncIterator,
+    ImageOrBytes,
     RGBA_VALS,
-    load_data,
-    log_sem,
+    Pathslist,
+    Sequence,
+    PilImage,
+    Callable,
+    Optional,
+    Tuple,
+    List,
+    Any,
+)
+
+from utils import (
     save_to_disk,
     pil2opencv,
+    load_data,
+    save_png,
+    log_sem,
 )
 
 language_detection = pipeline("text-classification", model="papluca/xlm-roberta-base-language-detection")
@@ -45,29 +59,7 @@ if not APP_DIR.exists():
     APP_DIR.mkdir()
 
 
-def detect_language_transformers(text):
-    try:
-        result = language_detection(text)
-        language = result[0]['label']
-        score = result[0]['score']
-        return language, score
-    except Exception as e:
-        return str(e)
-
-
-async def extract_bits(image, bit_type, scan_direction):
-    width, height = image.size
-    bit_values = []
-    for x in range(width if scan_direction == 'col' else height):
-        for y in range(height if scan_direction == 'row' else width):
-            if bit_type == 'lsb':
-                bit_values += [(r & 1, g & 1, b & 1) for r, g, b in image.getpixel((x, y))]
-            elif bit_type == 'msb':
-                bit_values += [((r >> 7) & 1, (g >> 7) & 1, (b >> 7) & 1) for r, g, b in image.getpixel((x, y))]
-    return bit_values
-
-
-async def load_jobs(func, *args):
+async def load_jobs(func: Callable, *args: Any):
     async with asyncio.TaskGroup() as tg:
         await tg.create_task(func(*args))
 
@@ -78,17 +70,17 @@ class Job:
         'loop', 'debug', 'rw', 'mime', 'ext', 'task_queue', '_cvimg'
     )
 
-    def __init__(self, img, tasks, output_dir, filename, ext, mime, rw, debug):
+    def __init__(self, img: PilImage, tasks: CombinationList,
+                 output_dir: Path, filename: str, ext: str, mime: str, rw: bool, debug: bool):
         tasks = [t for t in tasks if t is not None]
-        self.image: Image.Image = img
-        self.tasks: List[Tuple[FunctionType, str | int],] | List[FunctionType, str | int] = tasks
+        self.image: PilImage = img
+        self.tasks: CombinationList = tasks
         self.output_dir: Path = output_dir
         self.filename: str = filename
         self.ext: str = ext
         self.mime: str = mime
         self.rw: bool = rw
-        self._cvimg: array = None
-        self.loop: AbstractEventLoop = asyncio.get_event_loop()
+        self._cvimg: Optional[ndarray] = None
         self.debug: bool = debug
 
         self.task_queue = asyncio.Queue()
@@ -97,7 +89,7 @@ class Job:
 
         asyncio.create_task(self.worker())
 
-    async def worker(self):
+    async def worker(self) -> None:
         while not self.task_queue.empty():
             function, params = await self.task_queue.get()
             self.image = function(self.image, params)
@@ -115,7 +107,9 @@ class Job:
         elif last_func_name == 'get_band':
             self.filename += f"_chan-{last_param}"
 
-    async def save(self, obj: str | bytes | Image.Image, convert=False, quality=95):
+    async def save(self, obj: AnyDataContent,
+                   convert: bool = False, keep_rgb: bool = True, quality: int = 95):
+        """Saves image to disc"""
         file_name = self.filename + '.' + self.ext
         abs_path = self.output_dir / file_name
         await save_to_disk(obj, abs_path, convert, True, quality, self.loop)
@@ -125,7 +119,7 @@ class Job:
         return self.image.getdata()
 
     @property
-    def cvimg(self):
+    def cvimg(self) -> ndarray:
         if self._cvimg is None:
             self._cvimg = pil2opencv(self.image)
         return self._cvimg
@@ -146,33 +140,32 @@ class Job:
     def size(self) -> Tuple[int, int]:
         return self.image.size
 
-    def __and__(self, j: Job):
+    def __and__(self, j: Job) -> ndarray:
         return self.data & j.data
 
-    def __or__(self, j: Job):
+    def __or__(self, j: Job) -> ndarray:
         return self.data | j.data
 
-    def __xor__(self, j: Job):
+    def __xor__(self, j: Job) -> ndarray:
         return self.data ^ j.data
 
-    def __eq__(self, j: Job):
+    def __eq__(self, j: Job) -> bool:
         return self.data == j.data
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.data)
 
 
 class Manager:
 
     def __init__(self, project_name: str, file_paths: List[Path], options: Namespace, _loop=None):
-        self.ext = None
-        self.loop = _loop if _loop is not None else asyncio.get_event_loop()
-        self.project_name = project_name
-        self.filepaths = file_paths
+        self.loop: AbstractEventLoop = _loop if _loop is not None else asyncio.get_event_loop()
+        self.project_name: str = project_name
+        self.filepaths: List[Path] = file_paths
         self.options: Namespace = options
-        self.output_dir = options.outdir / f"{project_name}"
-        self.scan_depth = options.depth
-        self.debug = options.debug
+        self.output_dir: Path = options.outdir / f"{project_name}"
+        self.scan_depth: int = options.depth
+        self.debug: bool = options.debug
 
         if not self.output_dir.exists():
             self.output_dir.mkdir()
@@ -184,7 +177,7 @@ class Manager:
         # cleanup
         pass
 
-    async def load_file_paths(self):
+    async def load_file_paths(self) -> AsyncIterator[Pathslist]:
         """Loads the file paths that the user put as params at program start"""
         for path in self.filepaths:
             mime_type = magic.from_file(path, mime=True)
@@ -195,7 +188,7 @@ class Manager:
                 image = await load_data(path)
             yield [image, path, mime_type]
 
-    async def create_backup(self, filename: str, data: bytes | Image, src_path: Path):
+    async def create_backup(self, filename: str, data: ImageOrBytes, src_path: Path):
         """
         Creates a copy of the users image in project directory and
         a decompressed version of the image if it's a PNG.
@@ -213,8 +206,12 @@ class Manager:
             async with open(backup_path, 'wb') as dst:
                 await dst.write(await src.read())
 
-    async def parse_transformation_ruleset(self, image, mime: str):
-        """Creates combinations of all transformation rules applied to the image"""
+    async def parse_transformation_ruleset(
+        self, image: PilImage, mime: str
+    ) -> AsyncIterator[CombinationList]:
+        """
+        Creates combinations of all transformation rules applied to the image
+        """
         rules, bands, mirrors, angles = [], [], [], []
         opt_angles = self.options.angles
         opt_mirror = self.options.mirror
@@ -243,7 +240,7 @@ class Manager:
         for x in combs:
             yield x
 
-    async def do_report(self, name, vals, force_overwrite=False):
+    async def do_report(self, name: str, vals: Tuple[str, int, float, int], force_overwrite: bool = False):
         await log_sem.acquire()
         rep_log = (f"{name} - Type: {name[-3:].upper()}, Method: {vals[0]}, Size: {vals[1]},"
                    f" Entropy: {vals[2]}, Filesize: {vals[3]}")
@@ -259,7 +256,8 @@ class Manager:
                     lines.sort()
             await file.writelines(lines)
 
-    async def load(self, image: Image.Image | bytes, path: Path, mime: str, combination):
+    async def load(self, image: ImageOrBytes,
+                   path: Path, mime: str, combination: CombinationList) -> Job:
         """Instantiates a Job class"""
         filename, ext = path.name.split('.')
         return Job(

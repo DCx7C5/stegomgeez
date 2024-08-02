@@ -1,4 +1,4 @@
-def encrypt(text, shift):
+def encrypt(text: str, shift):
     result = ""
     for char in text:
         if char.isalpha():
@@ -9,7 +9,7 @@ def encrypt(text, shift):
     return result
 
 
-def decrypt(text, shift):
+def decrypt(text: str, shift):
     return encrypt(text, -shift)
 
 

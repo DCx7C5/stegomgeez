@@ -18,7 +18,7 @@ def generate_matrix(key):
     return [matrix[i:i+5] for i in range(0, 25, 5)]
 
 
-def encrypt(text, key):
+def encrypt(text: str, key):
     text = text.upper().replace('J', 'I').replace(' ', '')
     matrix = generate_matrix(key)
     pairs = [(text[i], text[i+1]) for i in range(0, len(text), 2)]
@@ -41,7 +41,7 @@ def encrypt(text, key):
     return result
 
 
-def decrypt(text, key):
+def decrypt(text: str, key):
     matrix = generate_matrix(key)
 
     result = ""

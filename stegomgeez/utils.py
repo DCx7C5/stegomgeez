@@ -4,7 +4,13 @@ from aiofiles import open
 from pathlib import Path
 from re import compile
 from itertools import product
-from typing import Tuple, List
+from typing_definitions import (
+    AnyDataContent,
+    PilImage,
+    Literal,
+    Tuple,
+    List,
+)
 
 from PIL import Image
 from hashid import HashID
@@ -91,7 +97,7 @@ def identify_hash(text: str) -> List[str]:
     return possible_hashes
 
 
-def pil2opencv(image: Image.Image) -> ndarray:
+def pil2opencv(image: PilImage) -> ndarray:
     open_cv_image = array(image)
     return open_cv_image[:, :, ::-1].copy()
 
@@ -101,12 +107,12 @@ def save_png(image: Image.Image, path: Path, compression_level=0, iformat='PNG')
     image.save(path, format=iformat, compress_level=compression_level)
 
 
-def save_jpg(image: Image.Image, path: Path, quality=100, iformat='JPEG', keep_rgb=True) -> None:
+def save_jpg(image: PilImage, path: Path, quality=100, iformat='JPEG', keep_rgb=True) -> None:
     """Save a JPG file"""
     image.save(path, format=iformat, quality=quality, keep_rgb=keep_rgb)
 
 
-def save_image(image: Image.Image, path: Path, convert=False, keep_rgb=True, quality=95) -> None:
+def save_image(image: PilImage, path: Path, convert=False, keep_rgb=True, quality=95) -> None:
     """Save an image file, wrapper function fpr save_jpg, save_png"""
     if convert and path.suffix in ['.png', '.PNG']:
         path = path.with_suffix('.jpg')
@@ -144,18 +150,19 @@ async def load_text(path: Path) -> str:
         return await f.read()
 
 
-def save_image_to_disk(image: Image.Image, path: Path, convert=False, keep_rgb=True, quality=95):
+def save_image_to_disk(image: PilImage, path: Path, convert=False, keep_rgb=True, quality=95):
     save_image(image, path, convert=convert, keep_rgb=keep_rgb, quality=quality)
 
 
 async def save_to_disk(
-        obj: str | bytes | Image.Image,
+        obj: AnyDataContent,
         path: Path, convert=False,
         keep_rgb=True,
         quality=95,
         loop=None
 ) -> None:
-    if isinstance(obj, Image.Image):
+    if isinstance(obj, PilImage):
+        loop = asyncio.get_event_loop()
         loop.run_in_executor(None, save_image, obj, path, convert, keep_rgb, quality)
         # save_image(obj, path, convert=convert, keep_rgb=keep_rgb, quality=quality)
     elif isinstance(obj, bytes):

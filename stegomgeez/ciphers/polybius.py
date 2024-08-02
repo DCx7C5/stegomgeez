@@ -13,7 +13,7 @@ def generate_square(key):
     return [matrix[i:i+5] for i in range(0, 25, 5)]
 
 
-def encrypt(text, key):
+def encrypt(text: str, key):
     matrix = generate_square(key)
     position = {char: (r, c) for r, row in enumerate(matrix) for c, char in enumerate(row)}
     result = ''
@@ -26,7 +26,7 @@ def encrypt(text, key):
     return result
 
 
-def decrypt(text, key):
+def decrypt(text: str, key):
     matrix = generate_square(key)
     result = ''
     i = 0

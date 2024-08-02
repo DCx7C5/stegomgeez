@@ -3,7 +3,7 @@ import numpy as np
 # key_matrix = np.array([[3, 3], [2, 5]])
 
 
-def encrypt(text, key_matrix):
+def encrypt(text: str, key_matrix):
     n = len(key_matrix)
     text = text.upper().replace(' ', '')
     if len(text) % n != 0:
@@ -17,7 +17,7 @@ def encrypt(text, key_matrix):
     return result
 
 
-def decrypt(text, key_matrix):
+def decrypt(text: str, key_matrix):
     n = len(key_matrix)
     inverse_matrix = np.linalg.inv(key_matrix).astype(int) % 26
     result = ''

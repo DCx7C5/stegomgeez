@@ -1,7 +1,7 @@
-from typing import Literal
+from typing_definitions import Literal
 
 
-def keyboard_shift(text, shift, qwerty_rows):
+def keyboard_shift(text: str, shift, qwerty_rows):
     # Create a mapping for each character to its shifted counterpart
     char_map = {}
     for row in qwerty_rows:
@@ -16,7 +16,7 @@ def keyboard_shift(text, shift, qwerty_rows):
     return shifted_text
 
 
-def bruteforce(text, layout=Literal["us", "de"]):
+def bruteforce(text: str, layout=Literal["us", "de"]):
     qwerty_rows = [
         f"qwert{'z' if layout == 'de' else 'y'}uiop",
         "asdfghjkl",

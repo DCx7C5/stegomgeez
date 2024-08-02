@@ -1,4 +1,4 @@
-from typing import List
+from typing_definitions import List
 
 
 def encrypt(text: str, square: List[List[int]]) -> str:

@@ -9,7 +9,7 @@ baconian_alphabet = {
 }
 
 
-def encrypt(text):
+def encrypt(text: str) -> str:
 
     text = text.upper().replace('J', 'I').replace('U', 'V')
     result = ''
@@ -21,7 +21,7 @@ def encrypt(text):
     return result.strip()
 
 
-def decrypt(text):
+def decrypt(text: str) -> str:
     text = text.replace(' ', '')
     result = ''
     for i in range(0, len(text), 5):

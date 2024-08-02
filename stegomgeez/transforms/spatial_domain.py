@@ -1,7 +1,13 @@
 from typing import List, Literal
 import cv2
-from PIL import Image
-from numpy import ndarray, uint8
+from numba import njit
+from numpy import uint8
+from typing_definitions import (
+    PilOrCvImage,
+    BitMatrix,
+    PilImage,
+    Literal,
+)
 
 from stegomgeez.helper import (
     str2bin_str,
@@ -12,19 +18,19 @@ from stegomgeez.helper import (
 
 
 def lsb_encode(
-        image: Image.Image | ndarray,
+        image: PilOrCvImage,
         message: str,
-        bitmatrix: List[int, int, int],
+        bitmatrix: BitMatrix,
         bit_type: Literal['row', 'col'] = 'lsb',
         scan_direction: Literal['row', 'col'] = 'row',
         delimiter: str = '#####',
-) -> Image.Image:
+) -> PilImage:
     """
     Encode a message into an image using a bit matrix and a bit type.
     """
 
     # Load image
-    if isinstance(image, Image.Image):
+    if isinstance(image, PilImage):
         image = pil2opencv(image)
 
     # Convert image to RGB
@@ -78,8 +84,8 @@ def lsb_encode(
 
 
 def lsb_decode(
-        image: Image.Image | ndarray,
-        bitmatrix: List[str],
+        image: PilOrCvImage,
+        bitmatrix: BitMatrix,
         bit_type: Literal['lsb', 'msb'] = 'lsb',
         scan_direction: Literal['row', 'col'] = 'row',
         delimiter: str = '#####',
@@ -87,7 +93,7 @@ def lsb_decode(
     """Decode a message from an image using a bit matrix and a bit type."""
 
     # Load image
-    if isinstance(image, Image.Image):
+    if isinstance(image, PilImage):
         image = pil2opencv(image)
 
     # Convert image to RGB

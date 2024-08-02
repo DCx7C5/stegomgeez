@@ -1,4 +1,4 @@
-def encrypt(text, key):
+def encrypt(text: str, key):
     key = key.upper()
     key_len = len(key)
     result = ""
@@ -11,7 +11,7 @@ def encrypt(text, key):
     return result
 
 
-def decrypt(text, key):
+def decrypt(text: str, key):
     key = key.upper()
     key_len = len(key)
     result = ""

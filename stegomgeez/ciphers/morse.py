@@ -13,7 +13,7 @@ MORSE_CODE_DICT = {
 }
 
 
-def encrypt(text, short='.', long='-', sep=' '):
+def encrypt(text: str, short='.', long='-', sep=' '):
     morse_dict = MORSE_CODE_DICT
     if short != '.':
         morse_dict = {k: v.replace('.', short) for k, v in morse_dict.items()}
@@ -22,7 +22,7 @@ def encrypt(text, short='.', long='-', sep=' '):
     return sep.join(morse_dict[char] for char in text.upper())
 
 
-def decrypt(text, short=".", long="-", char_sep=' '):
+def decrypt(text: str, short=".", long="-", char_sep=' '):
     morse_dict = {v: k for k, v in MORSE_CODE_DICT.items()}
     if short != '.':
         morse_dict = {k.replace('.', short): v for k, v in morse_dict.items()}

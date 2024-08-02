@@ -1,4 +1,4 @@
-def atbash(text):
+def atbash(text: str) -> str:
     result = ""
     for char in text:
         if char.isalpha():

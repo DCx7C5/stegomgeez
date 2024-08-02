@@ -1,7 +1,8 @@
 import importlib
 import inspect
 import os
-from types import FunctionType
+from typing_definitions import Callable
+
 
 __all__ = [f[:-3] for f in os.listdir(os.path.dirname(__file__)) if f.endswith('.py') and f != '__init__.py']
 
@@ -24,7 +25,7 @@ class Ciphers:
             module = importlib.import_module(module_path)
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if isinstance(attr, FunctionType):
+                if isinstance(attr, Callable):
                     setattr(inner, attr_name, attr)
             setattr(self, module_name, inner)
 
