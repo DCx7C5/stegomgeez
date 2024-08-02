@@ -1,6 +1,6 @@
 from collections import Counter
 
-from helper import (
+from utils import (
     binary_pattern,
     whitespace_pattern,
     capital_pattern,

@@ -1,5 +1,7 @@
+import asyncio
 from asyncio import Semaphore
 
+import cv2
 from aiofiles import open
 from pathlib import Path
 from re import compile
@@ -16,6 +18,19 @@ from PIL import Image
 from hashid import HashID
 from numpy import array, ndarray
 from sympy import primerange
+from transformers import pipeline
+from torch.cuda import is_available
+from torch import device
+import matplotlib.pyplot as plt
+
+device = device('cuda' if is_available() else 'cpu')
+
+hashid = HashID()
+
+language_detection = pipeline(
+    task="text-classification",
+    model="papluca/xlm-roberta-base-language-detection",
+)
 
 
 filename_log_pattern = compile(r'^(\w{,255}\.\w{3,4}) |:')
@@ -25,14 +40,15 @@ capital_pattern = compile(r'[A-Z]{2,}')
 punctuation_pattern = compile(r'[!?,;:]{2,}')
 line_break_pattern = compile(r'\n{2,}')
 
-hashid = HashID()
 
-RGBA_VALS = [
-    'R', 'G', 'B', 'A',
-    'RG', 'RB', 'RA', 'GB',
-    'GA', 'BA', 'RGB', 'RGA',
-    'RBA', 'GBA', 'RGBA'
-]
+def detect_language_transformers(text):
+    try:
+        result = language_detection(text)
+        language = result[0]['label']
+        score = result[0]['score']
+        return language, score
+    except Exception as e:
+        return str(e)
 
 
 def generate_combinations(*lists):
@@ -102,7 +118,34 @@ def pil2opencv(image: PilImage) -> ndarray:
     return open_cv_image[:, :, ::-1].copy()
 
 
-def save_png(image: Image.Image, path: Path, compression_level=0, iformat='PNG') -> None:
+def create_histogram(
+    image: ndarray | PilImage,
+    htype: Literal['color', 'grayscale'],
+    fpath: Path,
+) -> None:
+    if isinstance(image, PilImage):
+        image = pil2opencv(image)
+    if htype == 'color':
+        color = ('b', 'g', 'r')
+        for i, col in enumerate(color):
+            hist = cv2.calcHist([image], [i], None, [256], [0, 256])
+            plt.plot(hist, color=col)
+            plt.xlim([0, 256])
+        plt.title('Color Histogram')
+    elif htype == 'grayscale':
+        if len(image.shape) == 3 and image.shape[2] == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        hist = cv2.calcHist([image], [0], None, [256], [0, 256])
+        plt.plot(hist, color='black')
+        plt.xlim([0, 256])
+        plt.title('Grayscale Histogram')
+
+    plt.xlabel('Pixel Value')
+    plt.ylabel('Frequency')
+    plt.savefig(fpath)
+
+
+def save_png(image: PilImage, path: Path, compression_level=0, iformat='PNG') -> None:
     """Save a PNG file"""
     image.save(path, format=iformat, compress_level=compression_level)
 
@@ -159,7 +202,6 @@ async def save_to_disk(
         path: Path, convert=False,
         keep_rgb=True,
         quality=95,
-        loop=None
 ) -> None:
     if isinstance(obj, PilImage):
         loop = asyncio.get_event_loop()

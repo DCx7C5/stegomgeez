@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 from pywt import dwt2, idwt2
 
-from stegomgeez.helper import bin_str2str, str2bin_str
+from utils import bin_str2str, str2bin_str
 
 
 def find_delimiter(message, delimiter):

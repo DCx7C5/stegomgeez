@@ -1,4 +1,3 @@
-from typing import List, Literal
 import cv2
 from numba import njit
 from numpy import uint8
@@ -9,7 +8,7 @@ from typing_definitions import (
     Literal,
 )
 
-from stegomgeez.helper import (
+from utils import (
     str2bin_str,
     bin_str2str,
     bit2binstr,
