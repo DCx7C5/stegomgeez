@@ -42,3 +42,6 @@ HistogramType = Literal['color', 'grayscale']
 BitMatrix = List[Tuple[int, int, int]]
 
 BandCombinations = Dict[LiteralString | str, Image]
+
+ScanDirectionType = Literal['row', 'col']
+LsbOrMsbType = Literal['lsb', 'msb']

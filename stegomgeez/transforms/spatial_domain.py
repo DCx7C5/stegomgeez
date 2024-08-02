@@ -2,10 +2,11 @@ import cv2
 from numba import njit
 from numpy import uint8
 from typing_definitions import (
+    ScanDirectionType,
+    LsbOrMsbType,
     PilOrCvImage,
     BitMatrix,
     PilImage,
-    Literal,
 )
 
 from utils import (
@@ -16,13 +17,14 @@ from utils import (
 )
 
 
+@njit
 def lsb_encode(
         image: PilOrCvImage,
         message: str,
         bitmatrix: BitMatrix,
-        bit_type: Literal['row', 'col'] = 'lsb',
-        scan_direction: Literal['row', 'col'] = 'row',
-        delimiter: str = '#####',
+        bit_type: LsbOrMsbType = 'lsb',
+        scan_direction: ScanDirectionType = 'row',
+        delimiter: str = 'DCXXX',
 ) -> PilImage:
     """
     Encode a message into an image using a bit matrix and a bit type.
@@ -41,6 +43,7 @@ def lsb_encode(
     binary_message = str2bin_str(message)
     bit_index = 0
 
+    @njit
     def set_bits(value, bitmask):
         nonlocal bit_index
         for i in range(8):
@@ -82,12 +85,13 @@ def lsb_encode(
     return cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR)
 
 
+@njit
 def lsb_decode(
         image: PilOrCvImage,
         bitmatrix: BitMatrix,
-        bit_type: Literal['lsb', 'msb'] = 'lsb',
-        scan_direction: Literal['row', 'col'] = 'row',
-        delimiter: str = '#####',
+        bit_type: LsbOrMsbType = 'lsb',
+        scan_direction: ScanDirectionType = 'row',
+        delimiter: str = 'DCXXX',
 ) -> str:
     """Decode a message from an image using a bit matrix and a bit type."""
 
@@ -101,6 +105,7 @@ def lsb_decode(
 
     bit_values = []
 
+    @njit
     def extract_bits(value, bitmask, bt=bit_type):
         bits = []
         for i in range(8):
