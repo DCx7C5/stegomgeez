@@ -1,20 +1,23 @@
 from __future__ import annotations
 import asyncio
-import uvloop
 from asyncio import AbstractEventLoop
+import uvloop
+from os import (
+    get_terminal_size,
+    getuid, isatty,
+    getcwd,
+)
 
-from os import (getuid, isatty, get_terminal_size, getcwd)
 from pathlib import Path
 from pwd import getpwuid
 
-import aiofiles
+from aiofiles import open
 import magic
 
 from argparse import Namespace, ArgumentParser
 from PIL import Image
-from numpy import array, uint8
+from numpy import array, ndarray
 from rich.console import Console
-from transformers import pipeline
 from transforms.bands import get_band
 from transforms.geometric import change_angle, flip_image
 from ciphers import encrypt, decrypt
@@ -43,17 +46,16 @@ from utils import (
     log_sem,
 )
 
-language_detection = pipeline("text-classification", model="papluca/xlm-roberta-base-language-detection")
 
 console = Console(
-    color_system="truecolor",
+    color_system='truecolor',
     force_terminal=True,
     width=999 if not isatty(1) else get_terminal_size().columns,
 )
 
 
-HOME_DIR = Path(f"/home/{getpwuid(getuid())[0]}")
-APP_DIR = HOME_DIR / "STEGOSUITE"
+HOME_DIR = Path(f'/home/{getpwuid(getuid())[0]}')
+APP_DIR = HOME_DIR / 'STEGOSUITE'
 
 if not APP_DIR.exists():
     APP_DIR.mkdir()
@@ -67,7 +69,7 @@ async def load_jobs(func: Callable, *args: Any):
 class Job:
     __slots__ = (
         'tasks', 'image', 'output_dir', 'filename', 'ciphers',
-        'loop', 'debug', 'rw', 'mime', 'ext', 'task_queue', '_cvimg'
+        'debug', 'rw', 'mime', 'ext', 'task_queue', '_cvimg'
     )
 
     def __init__(self, img: PilImage, tasks: CombinationList,
@@ -112,7 +114,7 @@ class Job:
         """Saves image to disc"""
         file_name = self.filename + '.' + self.ext
         abs_path = self.output_dir / file_name
-        await save_to_disk(obj, abs_path, convert, True, quality, self.loop)
+        await save_to_disk(obj, abs_path, convert, keep_rgb, quality)
 
     @property
     def data(self) -> Sequence | array:
@@ -186,7 +188,7 @@ class Manager:
                 image.load()
             else:
                 image = await load_data(path)
-            yield [image, path, mime_type]
+            yield image, path, mime_type
 
     async def create_backup(self, filename: str, data: ImageOrBytes, src_path: Path):
         """
@@ -244,7 +246,7 @@ class Manager:
         await log_sem.acquire()
         rep_log = (f"{name} - Type: {name[-3:].upper()}, Method: {vals[0]}, Size: {vals[1]},"
                    f" Entropy: {vals[2]}, Filesize: {vals[3]}")
-        async with aiofiles.open(f"{self.output_dir}" + "report.txt", 'r+') as file:
+        async with open(f"{self.output_dir}" + "report.txt", 'r+') as file:
             lines = await file.readlines()
             for line in lines:
                 if name in line:
