@@ -1,4 +1,7 @@
-def encrypt(text: str, shift):
+from typing import List
+
+
+def encrypt(text: str, shift: int) -> str:
     result = ""
     for char in text:
         if char.isalpha():
@@ -9,11 +12,11 @@ def encrypt(text: str, shift):
     return result
 
 
-def decrypt(text: str, shift):
+def decrypt(text: str, shift: int) -> str:
     return encrypt(text, -shift)
 
 
-def bruteforce(text):
+def bruteforce(text: str) -> List[str]:
     lines = []
     for n in range(26):
         ld = decrypt(text, n)

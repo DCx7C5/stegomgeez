@@ -1,4 +1,4 @@
-def encrypt(text):
+def encrypt(text: str) -> str:
     return text[::-1]
 
 

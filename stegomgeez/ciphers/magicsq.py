@@ -1,7 +1,9 @@
-from typing_definitions import List
+from typing import List
+
+MagicSqType = List[List[int]]
 
 
-def encrypt(text: str, square: List[List[int]]) -> str:
+def encrypt(text: str, square: MagicSqType) -> str:
     size = len(square)
     if len(text) != size * size:
         raise ValueError("Text length must be equal to the size of the magic square.")
@@ -14,7 +16,7 @@ def encrypt(text: str, square: List[List[int]]) -> str:
     return ''.join(cipher)
 
 
-def decrypt(cipher: str, square: List[List[int]]) -> str:
+def decrypt(cipher: str, square: MagicSqType) -> str:
     size = len(square)
     if len(cipher) != size * size:
         raise ValueError("Cipher length must be equal to the size of the magic square.")

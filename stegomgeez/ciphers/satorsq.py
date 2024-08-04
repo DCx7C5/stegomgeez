@@ -1,3 +1,8 @@
+from typing import List, Set
+
+SatorSqType = List[List[str]]
+
+
 SATOR_SQUARE = [
     ["S", "A", "T", "O", "R"],
     ["A", "R", "E", "P", "O"],
@@ -7,14 +12,14 @@ SATOR_SQUARE = [
 ]
 
 
-def generate_flat_list(square):
+def generate_flat_list(square: SatorSqType) -> List[str]:
     _flat_list = []
     for row in square:
         _flat_list.extend(row)
     return list(set(_flat_list))
 
 
-def generate_maps(flat_list):
+def generate_maps(flat_list: List):
     _encrypt_map = {}
     _decrypt_map = {}
 

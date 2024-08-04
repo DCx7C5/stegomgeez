@@ -1,4 +1,4 @@
-def atbash(text: str) -> str:
+def encrypt(text: str) -> str:
     result = ""
     for char in text:
         if char.isalpha():
@@ -9,5 +9,4 @@ def atbash(text: str) -> str:
     return result
 
 
-decrypt = atbash
-encrypt = atbash
+decrypt = encrypt

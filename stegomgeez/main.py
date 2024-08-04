@@ -21,30 +21,38 @@ from rich.console import Console
 from transforms.bands import get_band
 from transforms.geometric import change_angle, flip_image
 from ciphers import encrypt, decrypt
+from cupy import ndarray, array
+from utils import (
+    get_mime_from_file,
+    save_to_disk,
+    pil2opencv,
+    load_data,
+    save_png,
+    log_sem, RGBA_VALS,
+)
 
-from typing_definitions import (
-    CombinationList,
-    AnyDataContent,
+from typing import (
     AsyncIterator,
-    ImageOrBytes,
-    RGBA_VALS,
-    Pathslist,
     Sequence,
-    PilImage,
     Callable,
     Optional,
+    Literal,
+    Union,
     Tuple,
     List,
     Any,
 )
 
-from utils import (
-    save_to_disk,
-    pil2opencv,
-    load_data,
-    save_png,
-    log_sem,
-)
+PilImageType = Image.Image
+Pathslist = Tuple[Image.Image, Path, str]
+CombinationItem = Tuple[Callable, Union[str, int]]
+Combination = List[CombinationItem]
+CombinationList = List[Combination]
+AnyDataContent = Union[str, bytes, Image.Image, bytes]
+ChangeAngleFunc = Callable[[Image.Image, int], Image.Image]
+FlipImageFunc = Callable[[Image.Image, Literal['ver', 'hor']], Image.Image]
+GetBandFunc = Callable[[Image.Image, str], Image.Image]
+TransformType = Union[ChangeAngleFunc, FlipImageFunc, GetBandFunc]
 
 
 console = Console(
@@ -72,10 +80,10 @@ class Job:
         'debug', 'rw', 'mime', 'ext', 'task_queue', '_cvimg'
     )
 
-    def __init__(self, img: PilImage, tasks: CombinationList,
+    def __init__(self, img: PilImageType, tasks: CombinationList,
                  output_dir: Path, filename: str, ext: str, mime: str, rw: bool, debug: bool):
         tasks = [t for t in tasks if t is not None]
-        self.image: PilImage = img
+        self.image: PilImageType = img
         self.tasks: CombinationList = tasks
         self.output_dir: Path = output_dir
         self.filename: str = filename
@@ -109,9 +117,11 @@ class Job:
         elif last_func_name == 'get_band':
             self.filename += f"_chan-{last_param}"
 
-    async def save(self, obj: AnyDataContent,
-                   convert: bool = False, keep_rgb: bool = True, quality: int = 95):
-        """Saves image to disc"""
+    async def save(self, obj: AnyDataContent, convert: bool = False,
+                   keep_rgb: bool = True, quality: int = 95):
+        """
+        Saves image to disc
+        """
         file_name = self.filename + '.' + self.ext
         abs_path = self.output_dir / file_name
         await save_to_disk(obj, abs_path, convert, keep_rgb, quality)
@@ -190,7 +200,7 @@ class Manager:
                 image = await load_data(path)
             yield image, path, mime_type
 
-    async def create_backup(self, filename: str, data: ImageOrBytes, src_path: Path):
+    async def create_backup(self, filename: str, data: PilImageType | bytes, src_path: Path):
         """
         Creates a copy of the users image in project directory and
         a decompressed version of the image if it's a PNG.
@@ -209,7 +219,7 @@ class Manager:
                 await dst.write(await src.read())
 
     async def parse_transformation_ruleset(
-        self, image: PilImage, mime: str
+        self, image: PilImageType, mime: str
     ) -> AsyncIterator[CombinationList]:
         """
         Creates combinations of all transformation rules applied to the image
@@ -258,7 +268,7 @@ class Manager:
                     lines.sort()
             await file.writelines(lines)
 
-    async def load(self, image: ImageOrBytes,
+    async def load(self, image: PilImageType | bytes,
                    path: Path, mime: str, combination: CombinationList) -> Job:
         """Instantiates a Job class"""
         filename, ext = path.name.split('.')
@@ -273,7 +283,7 @@ class Manager:
             debug=self.debug,
         )
 
-    async def start_manager(self):
+    async def start_manager(self) -> None:
         """Starts the manager"""
         async for img, path, mime in self.load_file_paths():
             await self.create_backup(path.name, img, path)
@@ -282,7 +292,7 @@ class Manager:
                     await tg.create_task(self.load(img, path, mime, combi))
 
 
-async def main(ev_loop):
+async def main(ev_loop: AbstractEventLoop):
     parser = ArgumentParser(prog="stegomgeez", description="Steganography toolset", )
     pos = parser.add_argument_group(title='Positional arguments:')
     pos.add_argument(

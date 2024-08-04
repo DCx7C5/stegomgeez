@@ -1,4 +1,9 @@
-def get_position(char, matrix):
+from typing import List, Tuple
+
+PfMatrixType = List[List[str]]
+
+
+def get_position(char: str, matrix: PfMatrixType) -> Tuple[int, int] | None:
     for row in range(5):
         for col in range(5):
             if matrix[row][col] == char:
@@ -6,7 +11,7 @@ def get_position(char, matrix):
     return None
 
 
-def generate_matrix(key):
+def generate_matrix(key: str) -> PfMatrixType:
     matrix = []
     for char in key.upper():
         if char not in matrix and char != 'J':
@@ -18,7 +23,7 @@ def generate_matrix(key):
     return [matrix[i:i+5] for i in range(0, 25, 5)]
 
 
-def encrypt(text: str, key):
+def encrypt(text: str, key: str) -> str:
     text = text.upper().replace('J', 'I').replace(' ', '')
     matrix = generate_matrix(key)
     pairs = [(text[i], text[i+1]) for i in range(0, len(text), 2)]
@@ -41,7 +46,7 @@ def encrypt(text: str, key):
     return result
 
 
-def decrypt(text: str, key):
+def decrypt(text: str, key: str) -> str:
     matrix = generate_matrix(key)
 
     result = ""

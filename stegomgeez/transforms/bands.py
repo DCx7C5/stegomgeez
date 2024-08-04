@@ -1,20 +1,18 @@
 from itertools import combinations
+from typing import Tuple, Dict, LiteralString
 
 from PIL import Image
 
-from typing_definitions import (
-    BandCombinations,
-    PilImage,
-    Tuple,
-    Dict,
-)
+
+PilImageType = Image.Image
+BandCombinations = Dict[LiteralString | str, Image.Image]
 
 
-def new_channel(size: Tuple[int, int]) -> PilImage:
+def new_channel(size: Tuple[int, int]) -> PilImageType:
     return Image.new('L', size)
 
 
-def merge_channels(mode: str, *channels) -> PilImage:
+def merge_channels(mode: str, *channels) -> PilImageType:
     return Image.merge(mode, channels)
 
 
@@ -31,7 +29,7 @@ def create_combinations(channels: Dict, size: Tuple[int, int]) -> BandCombinatio
     return combinations_dict
 
 
-def get_band(img: PilImage, bands: str):
+def get_band(img: PilImageType, bands: str):
     band_to_int = {'R': 0, 'G': 1, 'B': 2, 'A': 3}
     channels = {band: img.getchannel(band_to_int[band]) for band in bands}
     combinations_dict = create_combinations(channels, img.size)

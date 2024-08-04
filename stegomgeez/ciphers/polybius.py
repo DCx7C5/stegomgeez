@@ -1,6 +1,9 @@
+from typing import List
+
+PolybiusSqType = List[List[str]]
 
 
-def generate_square(key):
+def generate_square(key: str) -> PolybiusSqType:
     key = key.upper().replace('J', 'I')
     matrix = []
     for char in key:
@@ -13,7 +16,7 @@ def generate_square(key):
     return [matrix[i:i+5] for i in range(0, 25, 5)]
 
 
-def encrypt(text: str, key):
+def encrypt(text: str, key: str) -> str:
     matrix = generate_square(key)
     position = {char: (r, c) for r, row in enumerate(matrix) for c, char in enumerate(row)}
     result = ''
@@ -26,7 +29,7 @@ def encrypt(text: str, key):
     return result
 
 
-def decrypt(text: str, key):
+def decrypt(text: str, key: str) -> str:
     matrix = generate_square(key)
     result = ''
     i = 0

@@ -1,13 +1,9 @@
+from typing import Literal, Union, List, Tuple
+
 import cv2
-from numba import njit
-from numpy import uint8
-from typing_definitions import (
-    ScanDirectionType,
-    LsbOrMsbType,
-    PilOrCvImage,
-    BitMatrix,
-    PilImage,
-)
+from PIL import Image
+from cupy import ndarray
+from cupy.array_api import uint8
 
 from utils import (
     str2bin_str,
@@ -16,6 +12,12 @@ from utils import (
     pil2opencv,
 )
 
+PilImageType = Image.Image
+ImageOrBytes = Union[Image.Image, bytes]
+PilOrCvImage = Union[Image.Image, ndarray]
+LsbOrMsbType = Literal['lsb', 'msb']
+BitMatrix = List[Tuple[int, int, int]]
+ScanDirectionType = Literal['row', 'col']
 
 @njit
 def lsb_encode(
@@ -24,14 +26,14 @@ def lsb_encode(
         bitmatrix: BitMatrix,
         bit_type: LsbOrMsbType = 'lsb',
         scan_direction: ScanDirectionType = 'row',
-        delimiter: str = 'DCXXX',
-) -> PilImage:
+        delimiter: str = '#####',
+) -> PilImageType:
     """
     Encode a message into an image using a bit matrix and a bit type.
     """
 
     # Load image
-    if isinstance(image, PilImage):
+    if isinstance(image, PilImageType):
         image = pil2opencv(image)
 
     # Convert image to RGB
@@ -96,7 +98,7 @@ def lsb_decode(
     """Decode a message from an image using a bit matrix and a bit type."""
 
     # Load image
-    if isinstance(image, PilImage):
+    if isinstance(image, PilImageType):
         image = pil2opencv(image)
 
     # Convert image to RGB

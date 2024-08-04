@@ -1,9 +1,7 @@
-import numpy as np
-
-# key_matrix = np.array([[3, 3], [2, 5]])
+from cupy import array, dot, linalg, ArrayType
 
 
-def encrypt(text: str, key_matrix):
+def encrypt(text: str, key_matrix: ArrayType) -> str:
     n = len(key_matrix)
     text = text.upper().replace(' ', '')
     if len(text) % n != 0:
@@ -11,18 +9,18 @@ def encrypt(text: str, key_matrix):
 
     result = ''
     for i in range(0, len(text), n):
-        block = np.array([ord(char) - ord('A') for char in text[i:i+n]])
-        encrypted_block = np.dot(key_matrix, block) % 26
+        block = array([ord(char) - ord('A') for char in text[i:i+n]])
+        encrypted_block = dot(key_matrix, block) % 26
         result += ''.join(chr(num + ord('A')) for num in encrypted_block)
     return result
 
 
-def decrypt(text: str, key_matrix):
+def decrypt(text: str, key_matrix: ArrayType) -> str:
     n = len(key_matrix)
-    inverse_matrix = np.linalg.inv(key_matrix).astype(int) % 26
+    inverse_matrix = linalg.inv(key_matrix).astype(int) % 26
     result = ''
     for i in range(0, len(text), n):
-        block = np.array([ord(char) - ord('A') for char in text[i:i+n]])
-        decrypted_block = np.dot(inverse_matrix, block) % 26
+        block = array([ord(char) - ord('A') for char in text[i:i+n]])
+        decrypted_block = dot(inverse_matrix, block) % 26
         result += ''.join(chr(int(num) + ord('A')) for num in decrypted_block)
     return result
