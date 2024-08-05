@@ -210,12 +210,55 @@ async def save_to_disk(
         await save_text(obj, path)
 
 
-log_sem = Semaphore(1)  # semaphore for log
+def get_image_info(image: PilImageType, fpath: PathLike) -> ImgInfoType:
 
+    with image:
+        # Image information
+        img_info = {
+            'File Type': image.format,
+            'File Type Extension': fpath.name.split('.')[-1],
+            'MIME Type': get_mime_from_file(fpath),
+            'Image Width': image.width,
+            'Image Height': image.height,
+            'Bit Depth': image.info.get('bits', 'N/A'),
+            'Color Type': image.mode,
+            'Compression': image.info.get('compression', 'N/A'),
+            'Filter': image.info.get('filter', 'N/A'),
+            'Interlace': 'Interlaced' if image.info.get('interlace') else 'Noninterlaced',
+            'Significant Bits': ' '.join([str(image.info.get('bitdepth', 'N/A'))] * len(image.mode)) if image.info.get(
+                'bitdepth') else 'N/A',
+            'Background Color': image.info.get('background', 'N/A'),
+            'Exif Byte Order': image.info.get('exif_byte_order', 'N/A'),
+            'Software': image.info.get('software', 'N/A'),
+            'Image Size': f"{image.width}x{image.height}",
+            'Megapixels': f"{(image.width * image.height) / 1_000_000:.3f}"
+        }
 
-async def write_to_logfile(line: str, path: Path) -> None:
-    await log_sem.acquire()
-    async with open(path, "r+") as f:
-        pass
+        # Extract EXIF data
+        exif_data = image.getexif()
+        if exif_data:
+            img_info['EXIF'] = {ExifTags.TAGS.get(tag, tag): value for tag, value in exif_data.items()}
+
+    return img_info
 
     log_sem.release()
+
+def get_full_image_info(image: PilImageType, image_path: PathLike) -> Dict:
+    file_info = get_file_info(image_path)
+    image_info = get_image_info(image, image_path)
+    full_info = {**file_info, **image_info}
+
+    return full_info
+
+
+log_sem = Semaphore(1)
+
+
+async def write_bytes(path: PathLike, content: bytes) -> None:
+    async with aiopen(path, "wb") as f:
+        await f.write(content)
+
+
+async def write_text(path: PathLike, content: str) -> None:
+    async with aiopen(path, "w") as f:
+        await f.write(content)
