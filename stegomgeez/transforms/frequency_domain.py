@@ -1,6 +1,14 @@
 import cv2
-import numpy as np
 from pywt import dwt2, idwt2
+from numpy import (
+    abs as pyabs,
+    float32,
+    array,
+    uint8,
+    mean,
+    var,
+    fft,
+)
 
 from utils import bin_str2str, str2bin_str
 
@@ -25,7 +33,7 @@ def dct_encode(image_path, message, output_path, delimiter='#####'):
     binary_message = str2bin_str(message)
 
     # Perform DCT on the Y channel
-    dct_y = cv2.dct(np.float32(y_channel))
+    dct_y = cv2.dct(float32(y_channel))
 
     # Encode binary message into DCT coefficients
     idx = 0
@@ -43,7 +51,7 @@ def dct_encode(image_path, message, output_path, delimiter='#####'):
     encoded_image = cv2.cvtColor(encoded_ycrcb_image, cv2.COLOR_YCrCb2BGR)
 
     # Save the encoded image
-    cv2.imwrite(output_path, np.uint8(encoded_image))
+    cv2.imwrite(output_path, uint8(encoded_image))
 
 
 def dct_decode(image_path, delimiter='#####'):
@@ -54,7 +62,7 @@ def dct_decode(image_path, delimiter='#####'):
     y_channel, _, _ = cv2.split(ycrcb_image)
 
     # Perform DCT on the Y channel
-    dct_y = cv2.dct(np.float32(y_channel))
+    dct_y = cv2.dct(float32(y_channel))
 
     # Extract binary message from DCT coefficients
     binary_message = ''
@@ -79,8 +87,8 @@ def dft_encode(image_path, message, output_path, delimiter='#####'):
     binary_message = str2bin_str(message)
 
     # Perform DFT
-    dft_image = np.fft.fft2(image)
-    dft_image_shifted = np.fft.fftshift(dft_image)
+    dft_image = fft.fft2(image)
+    dft_image_shifted = fft.fftshift(dft_image)
 
     # Encode binary message into DFT coefficients
     idx = 0
@@ -95,9 +103,9 @@ def dft_encode(image_path, message, output_path, delimiter='#####'):
                 break
 
     # Perform inverse DFT
-    dft_image_ishifted = np.fft.ifftshift(dft_image_shifted)
-    encoded_image = np.fft.ifft2(dft_image_ishifted)
-    encoded_image = np.uint8(np.abs(encoded_image))
+    dft_image_ishifted = fft.ifftshift(dft_image_shifted)
+    encoded_image = fft.ifft2(dft_image_ishifted)
+    encoded_image = uint8(pyabs(encoded_image))
 
     # Save the encoded image
     cv2.imwrite(output_path, encoded_image)
@@ -107,8 +115,8 @@ def dft_decode(image_path, delimiter='#####'):
     """Decode data using Discrete Fourier Transform"""
     # Load image and convert to grayscale
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    dft_image = np.fft.fft2(image)
-    dft_image_shifted = np.fft.fftshift(dft_image)
+    dft_image = fft.fft2(image)
+    dft_image_shifted = fft.fftshift(dft_image)
 
     # Extract binary message from DFT coefficients
     binary_message = ''
@@ -148,7 +156,7 @@ def wavelet_encode(image_path, message, output_path, delimiter='#####'):
     # Perform inverse wavelet transform
     coeffs = LL, (LH, HL, HH)
     encoded_image = idwt2(coeffs, 'haar')
-    encoded_image = np.uint8(encoded_image)
+    encoded_image = uint8(encoded_image)
 
     # Save the encoded image
     cv2.imwrite(output_path, encoded_image)
@@ -177,8 +185,8 @@ def detect_fq_steganography(image_path):
     """Detect hidden data in the frequency domain using statistical analysis"""
     # Load image and convert to grayscale
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    dft_image = np.fft.fft2(image)
-    dft_image_shifted = np.fft.fftshift(dft_image)
+    dft_image = fft.fft2(image)
+    dft_image_shifted = fft.fftshift(dft_image)
 
     # Analyze the least significant bits of the DFT coefficients
     lsb_values = []
@@ -186,9 +194,11 @@ def detect_fq_steganography(image_path):
         for j in range(dft_image_shifted.shape[1]):
             lsb_values.append(int(dft_image_shifted[i, j].real) % 2)
 
+    lsb_values = array(lsb_values)
+
     # Perform statistical analysis on LSB values
-    lsb_mean = np.mean(lsb_values)
-    lsb_variance = np.var(lsb_values)
+    lsb_mean = mean(lsb_values)
+    lsb_variance = var(lsb_values)
 
     print("LSB Mean:", lsb_mean)
     print("LSB Variance:", lsb_variance)

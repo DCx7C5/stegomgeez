@@ -1,33 +1,30 @@
+from __future__ import annotations
+from typing import Tuple, List, Literal, Union, Dict, Any
 import asyncio
 from asyncio import Semaphore
+from pathlib import Path
 
+from aiofiles import open as aopen
 import cv2
-from aiofiles import open
+from PIL import ExifTags, Image
+from magic import (
+    MAGIC_MIME_TYPE,
+    Magic,
+)
 from pathlib import Path
 from re import compile
 from itertools import product
 from hashid import HashID
-from numpy import array, ndarray
 from sympy import primerange
-from transformers import pipeline
-from torch.cuda import is_available
-from torch import device
 import matplotlib.pyplot as plt
-
-
-from cupy import array, ndarray
+from numpy import array, ndarray
 
 
 PilImageType = Image.Image
 AnyDataContent = Union[str, bytes, Image.Image, bytes]
-
+ImgInfoType = Dict[str, str | None | int | Dict[str, Any]]
 
 hashid = HashID()
-
-language_detection = pipeline(
-    task="text-classification",
-    model="papluca/xlm-roberta-base-language-detection",
-)
 
 
 filename_log_pattern = compile(r'^(\w{,255}\.\w{3,4}) |:')
@@ -38,14 +35,47 @@ punctuation_pattern = compile(r'[!?,;:]{2,}')
 line_break_pattern = compile(r'\n{2,}')
 
 
-def detect_language_transformers(text):
-    try:
-        result = language_detection(text)
-        language = result[0]['label']
-        score = result[0]['score']
-        return language, score
-    except Exception as e:
-        return str(e)
+ZERO_WIDTH_CHARS = [
+    '\u200B',  # Zero Width Space
+    '\u200C',  # Zero Width Non-Joiner
+    '\u200D',  # Zero Width Joiner
+    '\u200E',  # Left-to-Right Mark
+    '\u200F',  # Right-to-Left Mark
+    '\u202A',  # Left-to-Right Embedding
+    '\u202B',  # Right-to-Left Embedding
+    '\u202C',  # Pop Directional Formatting
+    '\u202D',  # Left-to-Right Override
+    '\u202E',  # Right-to-Left Override
+    '\u2060',  # Word Joiner
+    '\u2061',  # Function Application
+    '\u2062',  # Invisible Times
+    '\u2063',  # Invisible Separator
+    '\u2064',  # Invisible Plus
+    '\u2066',  # Left-to-Right Isolate
+    '\u2067',  # Right-to-Left Isolate
+    '\u2068',  # First Strong Isolate
+    '\u2069',  # Pop Directional Isolate
+    '\uFEFF'  # Zero Width No-Break Space
+]
+
+RGBA_VALS = [
+    'R', 'G', 'B', 'A',
+    'RG', 'RB', 'RA', 'GB',
+    'GA', 'BA', 'RGB', 'RGA',
+    'RBA', 'GBA', 'RGBA'
+]
+
+common_english_letters_freq = "ETAOINSHRDLCUMWFGYPBVKJXQZ"
+
+
+def get_mime_from_file(fpath: Path) -> str:
+    with Magic(flags=MAGIC_MIME_TYPE) as m:
+        return m.id_filename(str(fpath))
+
+
+def get_mime_from_buffer(data: bytes) -> str:
+    with Magic(flags=MAGIC_MIME_TYPE) as m:
+        return m.id_buffer(data)
 
 
 def generate_combinations(*lists):
@@ -168,19 +198,19 @@ def save_image(image: PilImageType, path: Path, convert=False, keep_rgb=True, qu
 
 async def save_data(data: bytes, path: Path) -> None:
     """Write bytes asynchronously to a file"""
-    async with open(path, 'wb') as f:
+    async with aopen(path, 'wb') as f:
         await f.write(data)
 
 
 async def load_data(path: Path) -> bytes:
     """Load bytes asynchronously from a file"""
-    async with open(path, 'rb') as f:
+    async with aopen(path, 'rb') as f:
         return await f.read()
 
 
 async def save_text(text: str, path: Path) -> None:
     """Write text asynchronously to a file"""
-    async with open(path, 'w') as f:
+    async with aopen(path, 'w') as f:
         await f.write(text)
 
 
@@ -210,13 +240,12 @@ async def save_to_disk(
         await save_text(obj, path)
 
 
-def get_image_info(image: PilImageType, fpath: PathLike) -> ImgInfoType:
+def get_image_info(image: PilImageType, fpath: Path) -> ImgInfoType:
 
     with image:
         # Image information
         img_info = {
             'File Type': image.format,
-            'File Type Extension': fpath.name.split('.')[-1],
             'MIME Type': get_mime_from_file(fpath),
             'Image Width': image.width,
             'Image Height': image.height,
@@ -241,24 +270,15 @@ def get_image_info(image: PilImageType, fpath: PathLike) -> ImgInfoType:
 
     return img_info
 
-    log_sem.release()
-
-def get_full_image_info(image: PilImageType, image_path: PathLike) -> Dict:
-    file_info = get_file_info(image_path)
-    image_info = get_image_info(image, image_path)
-    full_info = {**file_info, **image_info}
-
-    return full_info
-
 
 log_sem = Semaphore(1)
 
 
-async def write_bytes(path: PathLike, content: bytes) -> None:
-    async with aiopen(path, "wb") as f:
+async def write_bytes(path: Path, content: bytes) -> None:
+    async with aopen(path, "wb") as f:
         await f.write(content)
 
 
-async def write_text(path: PathLike, content: str) -> None:
-    async with aiopen(path, "w") as f:
+async def write_text(path: Path, content: str) -> None:
+    async with aopen(path, "w") as f:
         await f.write(content)

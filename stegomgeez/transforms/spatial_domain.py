@@ -2,8 +2,8 @@ from typing import Literal, Union, List, Tuple
 
 import cv2
 from PIL import Image
-from cupy import ndarray
-from cupy.array_api import uint8
+from numpy import ndarray
+from numpy.array_api import uint8
 
 from utils import (
     str2bin_str,
@@ -19,7 +19,7 @@ LsbOrMsbType = Literal['lsb', 'msb']
 BitMatrix = List[Tuple[int, int, int]]
 ScanDirectionType = Literal['row', 'col']
 
-@njit
+
 def lsb_encode(
         image: PilOrCvImage,
         message: str,
@@ -45,7 +45,6 @@ def lsb_encode(
     binary_message = str2bin_str(message)
     bit_index = 0
 
-    @njit
     def set_bits(value, bitmask):
         nonlocal bit_index
         for i in range(8):
@@ -87,7 +86,6 @@ def lsb_encode(
     return cv2.cvtColor(pixels, cv2.COLOR_RGB2BGR)
 
 
-@njit
 def lsb_decode(
         image: PilOrCvImage,
         bitmatrix: BitMatrix,
@@ -107,7 +105,6 @@ def lsb_decode(
 
     bit_values = []
 
-    @njit
     def extract_bits(value, bitmask, bt=bit_type):
         bits = []
         for i in range(8):

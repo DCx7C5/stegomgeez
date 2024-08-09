@@ -1,7 +1,7 @@
-from cupy import array, dot, linalg, ArrayType
+from numpy import array, dot, linalg, ndarray
 
 
-def encrypt(text: str, key_matrix: ArrayType) -> str:
+def encrypt(text: str, key_matrix: ndarray) -> str:
     n = len(key_matrix)
     text = text.upper().replace(' ', '')
     if len(text) % n != 0:
@@ -15,7 +15,7 @@ def encrypt(text: str, key_matrix: ArrayType) -> str:
     return result
 
 
-def decrypt(text: str, key_matrix: ArrayType) -> str:
+def decrypt(text: str, key_matrix: ndarray) -> str:
     n = len(key_matrix)
     inverse_matrix = linalg.inv(key_matrix).astype(int) % 26
     result = ''

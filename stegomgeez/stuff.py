@@ -1,36 +1,12 @@
 from collections import Counter
-
 from utils import (
     binary_pattern,
     whitespace_pattern,
     capital_pattern,
     punctuation_pattern,
     line_break_pattern,
+    ZERO_WIDTH_CHARS,
 )
-
-
-ZERO_WIDTH_CHARS = [
-    '\u200B',  # Zero Width Space
-    '\u200C',  # Zero Width Non-Joiner
-    '\u200D',  # Zero Width Joiner
-    '\u200E',  # Left-to-Right Mark
-    '\u200F',  # Right-to-Left Mark
-    '\u202A',  # Left-to-Right Embedding
-    '\u202B',  # Right-to-Left Embedding
-    '\u202C',  # Pop Directional Formatting
-    '\u202D',  # Left-to-Right Override
-    '\u202E',  # Right-to-Left Override
-    '\u2060',  # Word Joiner
-    '\u2061',  # Function Application
-    '\u2062',  # Invisible Times
-    '\u2063',  # Invisible Separator
-    '\u2064',  # Invisible Plus
-    '\u2066',  # Left-to-Right Isolate
-    '\u2067',  # Right-to-Left Isolate
-    '\u2068',  # First Strong Isolate
-    '\u2069',  # Pop Directional Isolate
-    '\uFEFF'  # Zero Width No-Break Space
-]
 
 
 def find_zero_width_chars(text):
